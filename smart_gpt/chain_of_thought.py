@@ -1,6 +1,13 @@
 import openai
-import datetime
+import tiktoken
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# Function for monitoring the number of tokens in a text string
+def num_tokens_from_string(string: str) -> int:
+    """Returns the number of tokens in a text string."""
+    encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+    num_tokens = len(encoding.encode(string))
+    return num_tokens
 
 
 # Function to generate chatbot response
@@ -33,18 +40,25 @@ def chain_of_thought_response(user_input, initial_guidance, eval_metrics):
     formatted_options = ", ".join(
         f"Option {i + 1}: {response_options[i]}" for i in range(3)
     )
-    
+    token_count = num_tokens_from_string(formatted_options)
+    print(f"token count of all response options: {token_count}")
     # Generate researcher evaluation
     ai_researcher_msg = f"You are an AI language model trained by OpenAI to act as a researcher tasked with evaluating the quality of responses to a user's prompt based on the following metrics: {eval_metrics}. Be sure to include your reasoning for each of your evaluations of the given responses."
     researcher_prompt = f"Original prompt: {user_input} Response options: {formatted_options}. You are a researcher tasked with evaluating the quality of these response options. List any flaws or faulty logic of each response. Let's think about this step by step:"
     researcher_evaluation = generate_chatbot_response(
         ai_researcher_msg, researcher_prompt
     )
+    token_count += num_tokens_from_string(researcher_evaluation)
+    print(f"token count after research evaluation: {token_count}")
 
     # Find the best response and improve it
     ai_decision_msg = f"You are an AI language model trained by OpenAI to decide which response option a research evaluator thought was best and then improve the quality of the chosen response based on the following metrics: {eval_metrics} and finally print out your final improved response for the user to see."
     final_response_prompt = f"Find which of the following responses the researcher thought was best, and improve that response to be used as a final response to a user's question or request. original responses: {formatted_options} researcher evalutions: {researcher_evaluation}"
     final_response = generate_chatbot_response(ai_decision_msg, final_response_prompt)
+    
+    token_count += num_tokens_from_string(final_response)
+    print(f"total response token count: {token_count}")
+    
 
     return final_response
 
