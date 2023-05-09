@@ -3,6 +3,7 @@ import openai
 import tiktoken
 import json
 import os
+from random import randrange
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
@@ -57,7 +58,7 @@ def chain_of_thought_response(user_input, initial_guidance, context, eval_metric
 
     with ThreadPoolExecutor() as executor:
         # Submit the API calls concurrently
-        futures = [executor.submit(generate_chatbot_response, ai_system_msg, preface_message) for _ in range(3)]
+        futures = [executor.submit(generate_chatbot_response, ai_system_msg, preface_message, model_temperature=(randrange(8)*.1)) for _ in range(3)]
 
         # Collect the results as they complete
         response_options = [future.result() for future in as_completed(futures)]
