@@ -1,6 +1,30 @@
+import datetime
 import openai
 import tiktoken
+import json
+import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+
+def get_current_time_formatted():
+    current_time = datetime.datetime.now()
+    return current_time.strftime("%Y-%m-%d_%H-%M-%S")
+
+
+def process_json_files(folder_path="data/message_history"):
+    combined_data = []
+    for file_name in os.listdir(folder_path):
+        if file_name.endswith('.json'):
+            file_path = os.path.join(folder_path, file_name)
+            
+            with open(file_path, 'r') as file:
+                data = json.load(file)
+                combined_data.extend(data)
+            
+    output_file_path = "data/full_message_history.json"
+    with open(output_file_path, 'w') as output_file:
+        json.dump(combined_data, output_file, indent=2)
+
 
 # Function for monitoring the number of tokens in a text string
 def num_tokens_from_string(string: str) -> int:
@@ -25,9 +49,10 @@ def generate_chatbot_response(
 
     return response["choices"][0]["message"]["content"]
 
-def chain_of_thought_response(user_input, initial_guidance, eval_metrics):
+
+def chain_of_thought_response(user_input, initial_guidance, context, eval_metrics):
     # Generate response options
-    ai_system_msg = f"You are an AI language model trained by OpenAI to assist users with answering various questions or requests. Your responses should be {initial_guidance}. If you are unsure about some of the information in your response, preface that information by saying you are not totally sure."
+    ai_system_msg = f"You are an AI language model trained by OpenAI to assist users with answering various questions or requests. Your responses should be {initial_guidance}. If you are unsure about some of the information in your response, preface that information by saying you are not totally sure. You may use the following context from previous conversations with the user to aid in your response if needed (if there is none that means you have not spoken to user yet): {context}"
     preface_message = f"Question: {user_input} Answer: Let's work this out in a step by step way to be sure we have the right answer."
 
     with ThreadPoolExecutor() as executor:
@@ -42,6 +67,7 @@ def chain_of_thought_response(user_input, initial_guidance, eval_metrics):
     )
     token_count = num_tokens_from_string(formatted_options)
     print(f"token count of all response options: {token_count}")
+    
     # Generate researcher evaluation
     ai_researcher_msg = f"You are an AI language model trained by OpenAI to act as a researcher tasked with evaluating the quality of responses to a user's prompt based on the following metrics: {eval_metrics}. Be sure to include your reasoning for each of your evaluations of the given responses."
     researcher_prompt = f"Original prompt: {user_input} Response options: {formatted_options}. You are a researcher tasked with evaluating the quality of these response options. List any flaws or faulty logic of each response. Let's think about this step by step:"
@@ -58,7 +84,15 @@ def chain_of_thought_response(user_input, initial_guidance, eval_metrics):
     
     token_count += num_tokens_from_string(final_response)
     print(f"total response token count: {token_count}")
-    
+
+    # Save the chat history to a json file
+    if context != "none":
+        current_time = get_current_time_formatted()
+        json_filename = f"chat_history_{current_time}.json"
+        json_data = [{"role": "user", "content": user_input}, {"role": "assistant", "content": final_response}]
+        with open(f"data/message_history/{json_filename}", 'w') as outfile:
+            json.dump(json_data, outfile, indent=4)
+        process_json_files()
 
     return final_response
 
