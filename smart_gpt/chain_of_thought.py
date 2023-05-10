@@ -86,14 +86,5 @@ def chain_of_thought_response(user_input, initial_guidance, context, eval_metric
     token_count += num_tokens_from_string(final_response)
     print(f"total response token count: {token_count}")
 
-    # Save the chat history to a json file
-    if context != "none":
-        current_time = get_current_time_formatted()
-        json_filename = f"chat_history_{current_time}.json"
-        json_data = [{"role": "user", "content": user_input}, {"role": "assistant", "content": final_response}]
-        with open(f"data/message_history/{json_filename}", 'w') as outfile:
-            json.dump(json_data, outfile, indent=4)
-        process_json_files()
-
     return final_response
 
