@@ -37,13 +37,13 @@ def num_tokens_from_string(string: str) -> int:
 
 # Function to generate chatbot response
 def generate_chatbot_response(
-    system_message_content, user_message_content, model_temperature=0.5
+    system_message_content, user_message_content, model_temperature=0.5, model="gpt-3.5-turbo"
 ):
     system_message = {"role": "system", "content": system_message_content}
     user_message = {"role": "user", "content": user_message_content}
 
     response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+        model=model,
         messages=[system_message, user_message],
         temperature=model_temperature,
     )
@@ -80,8 +80,8 @@ def chain_of_thought_response(user_input, initial_guidance, context, eval_metric
 
     # Find the best response and improve it
     ai_decision_msg = f"You are an AI language model trained by OpenAI to decide which response option a research evaluator thought was best and then improve the quality of the chosen response based on the following metrics: {eval_metrics} and finally print out your final improved response for the user to see."
-    final_response_prompt = f"Find which of the following responses the researcher thought was best, and improve that response to be used as a final response to a user's question or request. original responses: {formatted_options} researcher evalutions: {researcher_evaluation}"
-    final_response = generate_chatbot_response(ai_decision_msg, final_response_prompt)
+    final_response_prompt = f"Find which of the following responses the researcher thought was best, and improve that response to be used as a final response to a user's question or request. Only respond with your final improved response, no need to explain your reasoning for why you chose the response that you did. original responses: {formatted_options} researcher evalutions: {researcher_evaluation}"
+    final_response = generate_chatbot_response(ai_decision_msg, final_response_prompt, model="gpt-4")
     
     token_count += num_tokens_from_string(final_response)
     print(f"total response token count: {token_count}")
